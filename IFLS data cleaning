@@ -1,0 +1,270 @@
+**This is a random IFLS data cleaning with no topic of research
+**This dofile is used to demonstrate my data cleaning skills for IFLS
+
+
+//===============================\\
+
+//BOOK K - AR Section (Household Member)
+use "$hh14\bk_ar1.dta", clear
+count
+des
+//Roster data (Household Member)
+duplicates report pidlink
+duplicates report hhid14 pid14
+bys pidlink: gen dup_pidlink=_N
+gen member14_ar=(ar01a==1 | ar01a==2 |ar01a==5 | ar01a==11)
+
+//Household size
+bys hhid14: egen hhsize=sum(member14_ar)
+tab ar01a member14_ar
+tab hhsize
+label variable member14_ar "Status member of HH14"
+label variable hhsize "Household size"
+save "$output\roster14", replace
+
+
+//BOOK K - AR Section (Household Member)
+use "$hh14\bk_ar1.dta", clear
+
+//Sex variable
+gen male=ar07
+replace male=0 if ar07==3
+label define male 0"0: Female" 1"1: Male", add modify
+label values male male
+label variable male "Sex"
+tab male
+
+//Age Variable
+tab ar09,m
+gen age=ar09
+recode age (998 999=.)
+label variable age "Age"
+
+
+//Marital status variable
+tab ar13
+gen marital_status = 1 if inlist(ar13,1,6)
+replace marital_status = 2 if inlist(ar13,3,4,5)
+replace marital_status = 3 if ar13==2
+replace marital_status = . if inlist(ar13,8,9)
+tab marital_status,m
+label define marital_status 1"1:Unmarried" 2"2:Separeted/Divorced" 3"3:Married", add modify
+label values marital_status marital_status
+label variable marital_status "Marital Status"
+
+//Marital status variable (dummy)
+gen married =  ar13==2
+replace married = . if inlist(ar13,8,9)
+tab married, m
+label define married 0"0:Unmarried" 1"0:Married", add modify
+label values married married
+label variable married "Married"
+
+keep hhid14_9 hhid14 pid14 male age agesq marital_status married
+save "$output\demographic14", replace
+
+
+//Book K - SC Section (Sampling Description)
+use "$hh14\bk_sc1", clear
+des
+tab sc05,m
+gen kabid = sc01*100+sc02
+gen kecid = (kabid*1000)+sc03
+label variable kabid "Kabupaten ID"
+label variable kecid "Kecamatan ID"
+
+//Residential Area Variable
+gen urban=1 if sc05==1
+replace urban=0 if sc05==2
+label define urban 1"1: Urban" 0"0: Rural", add modify
+label value urban urban
+label variable urban "Residential Area"
+tab urban, m
+keep hhid14 urban sc01 sc02 sc03 kabid kecid
+save "$output\residentialarea14", replace
+
+
+//Book 3A - TK Section (Labor)
+use "$hh14\b3a_tk1", clear
+des
+
+//Work = 1 if the main activity is work or at least 1 hour per week (According to BPS)
+tab tk01, m
+tab tk02, m
+//
+gen work = tk01==1 | tk02==1 
+la def work 0"0:Unemployed" 1"1:Emploed", add modify
+la val work work
+la var work "Employment Status"
+tab work,m
+
+keep hhid14 pid14 pidlink work
+save "$output\workingstatus14", replace
+
+//Working hours
+use "$hh14\b3a_tk2", clear
+tab tk22a
+
+gen hours_work = tk22a
+recode hours_work (998 999 168=.)
+label variable hours_work "Worrking hours"
+keep hhid14 pid14 pidlink hours_work
+tab hours_work
+save "$output\hours_work14", replace
+
+//Replace hours_work = 0 if unemployed
+use "$output\workingstatus14", clear
+merge 1:1 hhid14 pid14 using "$output\hours_work14", nogen
+replace hours_work = 0 if work==0
+tab hours_work
+save "$output\workstat14", replace
+
+
+//Book 3B - KK Section (Health Condition)
+use "$hh14\b3b_kk1", clear
+tab kk01, m
+//General health condition (self assess)
+gen health = kk01
+recode health (1=4) (2=3) (3=2) (4=1)
+tab health
+
+label define health 1"1: Very unhealthy" 2"2: Somewhat unhealthy" 3"3: Somewhat healthy" 4"4: Very healthy"
+label define needhelp 1"1: Yes" 0"0: No"
+label values health health
+label variable health "Health status"
+tab health
+
+keep hhid14 pid14 pidlink health
+save "$output\helath14", replace
+
+use "$hh14\b3b_kk4", clear
+tab kk04b
+tab kk04a
+gen needhelp = kk04b
+recode needhelp (3=0) (9=.)
+tab needhelp
+replace needhelp = 0 if kk04a == 1 | kk04a==2
+label define yes_no 1"1: Yes" 0"0: No"
+label values needhelp yes_no
+label variable needhelp "Need help with basic personal needs"
+tab needhelp
+
+keep hhid14 pid14 pidlink needhelp
+save "$output\needhelp14", replace
+
+
+//Book 3B - CD Section (Chronic Condition)
+use "$hh14/b3b_cd2", clear
+des
+tab cd01
+recode cd01 (3=0) (8=.)
+drop if cd01==.
+//Chronic Condition Variable - 1
+keep hhid14 pid14 pidlink cd01 cd01type
+reshape wide cd01, i(pidlink) j(cd01type) string
+order hhid14 pid14
+//Chronic1 for the first type of chronical condition such as brain damage, disabilities, mental retardation, autism, sense proble, etc.
+gen kronis1= (cd01A==1 | cd01B==1 | cd01C==1 | cd01D==1 | cd01E==1 | cd01F==1 | cd01I==1)
+tab kronis1
+
+keep hhid14 pid14 kronis1 pidlink
+save "$output\kronis1_14", replace
+
+
+use "$hh14/b3b_cd3", clear
+keep pid14 hhid14 pidlink cd05 cdtype
+tab cd05, m
+
+//Chronic Condition Variable - 2
+recode cd05 (3=0) (8 9=.)
+drop if cd05==.
+reshape wide cd05, i(pidlink) j(cdtype) string
+//Kronis2 for the second type of chronical condition such as Hypertension, TBC, cancer, diabetes, stroke, etc.
+gen kronis2 = (cd05A==1 | cd05B==1 | cd05C==1 | cd05D==1 |cd05E==1 | cd05F==1 | cd05G==1 | cd05H==1 | cd05I==1 | cd05J==1 | cd05M==1 | cd05N==1 | cd05O==1 | cd05P==1 | cd05Q==1 | cd05R==1)
+tab kronis2
+**The variable will be dummy (1 if have chronic disease and 0 if non)
+
+keep pid14 hhid14 pidlink kronis2
+save "$output\kronis2_14", replace
+
+//Merging the kronis1 and kronis2 datasets
+use "$output\kronis1_14", clear
+merge 1:1 hhid14 pid14 using "$output\kronis2_14"
+drop _m
+
+gen kronis = kronis1==1 | kronis2==1
+tab kronis
+label define kronis 0"0: No" 1"1: Yes", add modify
+label values kronis kronis
+label variable kronis "Had a chronical condition"
+tab kronis
+save "$output\kronis14", replace
+
+
+//Book 3B - KM Section (Smoking Behavior)
+use "$hh14\b3b_km", clear
+
+/*Creating a Dummy Variable for Smoking Habit
+For people who have smoked and are still smoking*/
+
+gen smoking=(km01a==1 & km04==1 & (km01c==1 | km01d==1 | km01e==1))
+label define smoking 1"1:smoking" 0"0:not smoking", add modify
+label values smoking smoking
+label variable smoking "Smoking behavior"
+tab smoking, m
+
+//Creating a Cigarette Consumption 
+gen cigs=km08
+replace cigs=0 if km01a==3
+tab cigs, m
+label variable cigs "Cigarette consumption (stick)"
+//Creating Variable Cigarette Costs
+tab km09
+gen cigscost=km09*4
+replace cigscost=0 if km01a==3
+tab cigscost, m
+label variable cigscost "Monthly cigarette cost"
+keep pid14 pidlink hhid14 merokok cigs cigscost
+save "$output\smoking14", replace
+
+
+//Percentage of cigarette expenditure to total household expenditure and food expenditure
+use "$hh14\b1_ks1", clear
+bysort hhid14: egen food = sum(ks02)
+bysort hhid14: egen food2 = sum(ks03)
+
+**multiply by 52and divide by 12 (weekly to monthly)
+bysort hhid14: gen mon_food1 = (food*52)/12
+bysort hhid14: gen mon_food2 = (food2*52)/12
+
+gen monthly_food = mon_food1 + mon_food2
+gen cigs_exp = ks02 + ks03 if ks1type=="HA"
+gen mon_cigs_exp = (cigs_exp*52)/12
+bysort hhid14: egen monthly_cigs = max(mon_cigs_exp)
+
+bysort hhid14: gen n = _n
+keep if n==1
+drop n
+
+keep hhid14 monthly_food mon_food1 mon_food2 monthly_cigs
+save "$output\smoke_exp14", replace
+
+use "$output\roster14", clear
+merge m:1 hhid14 using "$output\smoke_exp14"
+drop _m
+merge m:1 hhid14 using "$pce\pce14nom"
+
+gen hhexp = pce*hhsize
+des
+//%merokok/expen
+gen rokokperexpen = (monthly_cigs/hhexp)*100
+//%merokok/makanan
+gen rokokperfood = (monthly_cigs/monthly_food)*100
+
+sum rokokperexpen rokokperfood
+bysort hhid14: gen n = _n
+keep if n==1
+drop n
+keep hhid14 pce monthly_cigs monthly_food rokokperexpen rokokperfood
+save "$output\expenditure_hh14", replace
+
