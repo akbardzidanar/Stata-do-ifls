@@ -1,0 +1,431 @@
+**This dofile is cleaning data for Susenas 2023, the analysis is to see the distribution of recipients of social assistance and energy subsidies based on decile groups in Indonesia
+**Please cite to use this code
+**Akbar Dzidan Ar'rabani
+
+
+/*
+================================================================
+							Susenas 2023
+================================================================
+*/
+
+//Desil - Susenas 2023
+use "$kp23\blok43_11_31", clear
+xtile desil = kapita[fw=round(weind)], nq(10)
+tab desil[fw=round(weind)]
+
+//desil - weighted by wert
+xtile desil_wert = kapita[fw=round(wert)], nq(10)
+tab desil_wert[fw=round(wert)]
+
+//desil - no weighted
+xtile desil2 = kapita, nq(10)
+tab desil2
+
+//persentil - weighted by weind
+xtile persentil = kapita[fw=round(weind)], nq(100)
+tab persentil
+
+//persentil - weighted by wert
+xtile persentil_wert = kapita[fw=round(wert)], nq(100)
+tab persentil_wert
+
+//persentil - no weighted
+xtile persentil2 = kapita, nq(100)
+tab persentil2
+
+keep urut kapita expend wert weind psu ssu wi1 wi2 desil desil_wert desil2 persentil persentil_wert persentil2
+save "$output\desil_blok43_1131", replace
+
+
+use "$kp23\blok43_32_36", clear
+xtile desil = kapita[fw=round(weind)], nq(10)
+tab desil
+
+//desil - weighted by wert
+xtile desil_wert = kapita[fw=round(wert)], nq(10)
+tab desil_wert
+
+//desil - no weighted
+xtile desil2 = kapita, nq(10)
+tab desil2
+
+//persentil - weighted by weind
+xtile persentil = kapita[fw=round(weind)], nq(100)
+tab persentil
+
+//persentil - weighted by wert
+xtile persentil_wert = kapita[fw=round(wert)], nq(100)
+tab persentil_wert
+
+//persentil - no weighted
+xtile persentil2 = kapita, nq(100)
+tab persentil2
+
+keep urut kapita expend wert weind psu ssu wi1 wi2 desil desil_wert desil2 persentil persentil_wert persentil2
+save "$output\desil_blok43_3236", replace
+
+
+use "$kp23\blok43_51_94", clear
+xtile desil = kapita[fw=round(weind)], nq(10)
+tab desil
+
+//desil - weighted by wert
+xtile desil_wert = kapita[fw=round(wert)], nq(10)
+tab desil_wert
+
+//desil - no weighted
+xtile desil2 = kapita, nq(10)
+tab desil2
+
+//persentil - weighted by weind
+xtile persentil = kapita[fw=round(weind)], nq(100)
+tab persentil
+
+//persentil - weighted by wert
+xtile persentil_wert = kapita[fw=round(wert)], nq(100)
+tab persentil_wert
+
+//persentil - no weighted
+xtile persentil2 = kapita, nq(100)
+tab persentil2
+
+keep urut kapita expend wert weind psu ssu wi1 wi2 desil desil_wert desil2 persentil persentil_wert persentil2
+save "$output\desil_blok43_5194", replace
+
+//Merge
+use "$output\desil_blok43_1131", clear
+append using "$output\desil_blok43_3236"
+append using "$output\desil_blok43_5194"
+
+save "$output\desil_s23", replace
+
+
+//Data KOR - Bansos
+use "$kor23\kor23_rt", clear
+tab r2203
+tab r2204a
+gen pkh = r2204a==1
+tab pkh
+
+//BPNT
+tab r2207
+gen bpnt = r2207==1
+tab bpnt
+
+//ATENSI Lansia
+tab r2205
+gen atensi = r2205==1
+tab atensi
+
+//BSU
+tab r2206
+gen bsu = r2205==1
+tab bsu
+
+//BLT BBM
+tab r2209a
+gen blt_bbm = r2209a
+tab blt_bbm
+
+//BLT DD
+tab r2209b
+gen bltdd = r2209b==1
+tab bltdd
+
+//PKTD
+tab r2209c
+gen pktd = r2209c==1
+tab pktd
+
+foreach var of varlist pkh bpnt atensi bsu blt_bbm bltdd pktd {
+	label define `var' 0"0:Tidak" 1"1:Ya"
+	label values `var' `var'
+	label variable `var' "Penerima `var'"
+}
+
+//Kode kabupaten kota
+gen kab = string(r102, "%02.0f")
+egen kode_kabkot = concat (r101 kab)
+
+keep urut r101 r102 r301 kode_kabkot kab bltdd pktd blt_bbm bpnt pkh atensi bsu
+save "$output\bantuan23", replace
+
+
+//Data KOR - Energi
+use "$kor23\kor23_rt", clear
+tab r1817
+gen gas3kg = r1817==4
+tab gas3kg
+label define gas3kg 0"0:Lainnya" 1"1:Gas 3 Kg"
+label values gas3kg gas3kg
+label variable gas3kg "Bahan bakar utama untuk masak"
+tab gas3kg
+
+//Listrik
+tab r1816
+gen meteran = r1816==1
+gen pln_nonmeteran = r1816==2
+gen listrik_nonpln = r1816==3
+gen bukanlistrik = r1816==4
+gen penerangan = r1816
+label define penerangan 1"1:Listrik PLN" 2"2:Listik PLN Non Meteran" 3"3:Listrik Non PLN" 4"4:Bukan Listrik"
+label values penerangan penerangan
+tab penerangan
+
+tab r1816
+
+tab r1816b1
+gen daya = r1816b1
+label define daya 1"1:450 Watt" 2"2:900 Watt" 3"3:>=1300 Watt"
+label values daya daya
+label variable daya "Daya Listrik yang Terpasang"
+tab daya
+
+tab r1816b2
+tab r1816b3
+keep urut gas3kg meteran daya pln_nonmeteran listrik_nonpln bukanlistrik penerangan
+save "$output\listrik_gas_s23", replace
+
+
+//Konsumsi Energi
+use "$kp23\blok42_11_31", clear
+tab b42k3 if kode==209
+tab b42k3 if kode==210
+tab b42k4 if kode==211
+
+bysort urut: egen gen = max(b42k3) if kode==209
+bysort urut: egen generator = max(gen)
+tab generator
+gen bensin_gen_lt = b42k3 if kode==210 & generator==1
+gen solar_gen_lt = b42k3 if kode==210 & generator==2
+gen minyak_gen_lt = b42k3 if kode==210 & generator==3
+
+gen bensin_gen_rp = b42k4 if kode==211 & generator==1
+gen solar_gen_rp = b42k4 if kode==211 & generator==2
+gen minyak_gen_rp = b42k4 if kode==211 & generator==3
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	replace `var' = 0 if `var'==.
+}
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	bysort urut: egen `var'1 = max(`var')
+}
+
+gen bensin_lt = b42k3 if kode==215
+gen bensin_rp = b42k4 if kode==216
+bysort urut: egen bensin_lt1 = max(bensin_lt)
+bysort urut: egen bensin_rp1 = max(bensin_rp)
+gen harga_bensin = bensin_rp1/bensin_lt1
+
+gen solar_lt = b42k3 if kode==217
+gen solar_rp = b42k4 if kode==218
+bysort urut: egen solar_lt1 = max(solar_lt)
+bysort urut: egen solar_rp1 = max(solar_rp)
+gen harga_solar = solar_rp1/solar_lt1
+
+gen minyak_lt1 = b42k3 if kode==219
+gen minyak_rp1 = b42k4 if kode==220
+gen minyak_lt2 = b42k3 if kode==228
+gen minyak_rp2 = b42k4 if kode==229
+foreach var of varlist minyak* solar* bensin*{
+	replace `var' = 0 if `var'==.
+}
+gen minyak_lt = minyak_lt1 + minyak_lt2 
+gen minyak_rp = minyak_rp1 + minyak_rp2
+bysort urut: egen minyak_ltmax = max(minyak_lt)
+bysort urut: egen minyak_rpmax = max(minyak_rp)
+gen harga_minyak = minyak_rpmax/minyak_ltmax
+
+gen gas_kg = b42k3 if kode==224
+gen gas_rp = b42k4 if kode==225
+bysort urut: egen gas_kg1 = max(gas_kg)
+bysort urut: egen gas_rp1 = max(gas_rp)
+gen harga_gas = gas_rp1/gas_kg1
+
+gen total_bensin_lt = bensin_lt1 + bensin_gen_lt1
+gen total_bensin_rp = bensin_rp1 + bensin_gen_rp1
+gen total_solar_lt = solar_lt1 + solar_gen_lt1
+gen total_solar_rp = solar_rp1 + solar_gen_rp1
+gen total_minyak_lt = minyak_ltmax + minyak_gen_lt1
+gen total_minyak_rp = minyak_rpmax + minyak_gen_rp1
+
+keep urut bensin* harga* minyak* solar* gas* total*
+bysort urut: gen n=_n
+keep if n==1
+br total_bensin_lt bensin_gen_lt1 bensin_lt1
+save "$output\energi_11_31", replace
+
+use "$kp23\blok42_32_36", clear
+bysort urut: egen gen = max(b42k3) if kode==209
+bysort urut: egen generator = max(gen)
+tab generator
+gen bensin_gen_lt = b42k3 if kode==210 & generator==1
+gen solar_gen_lt = b42k3 if kode==210 & generator==2
+gen minyak_gen_lt = b42k3 if kode==210 & generator==3
+
+gen bensin_gen_rp = b42k4 if kode==211 & generator==1
+gen solar_gen_rp = b42k4 if kode==211 & generator==2
+gen minyak_gen_rp = b42k4 if kode==211 & generator==3
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	replace `var' = 0 if `var'==.
+}
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	bysort urut: egen `var'1 = max(`var')
+}
+
+gen bensin_lt = b42k3 if kode==215
+gen bensin_rp = b42k4 if kode==216
+bysort urut: egen bensin_lt1 = max(bensin_lt)
+bysort urut: egen bensin_rp1 = max(bensin_rp)
+gen harga_bensin = bensin_rp1/bensin_lt1
+
+gen solar_lt = b42k3 if kode==217
+gen solar_rp = b42k4 if kode==218
+bysort urut: egen solar_lt1 = max(solar_lt)
+bysort urut: egen solar_rp1 = max(solar_rp)
+gen harga_solar = solar_rp1/solar_lt1
+
+gen minyak_lt1 = b42k3 if kode==219
+gen minyak_rp1 = b42k4 if kode==220
+gen minyak_lt2 = b42k3 if kode==228
+gen minyak_rp2 = b42k4 if kode==229
+foreach var of varlist minyak* solar* bensin*{
+	replace `var' = 0 if `var'==.
+}
+gen minyak_lt = minyak_lt1 + minyak_lt2 
+gen minyak_rp = minyak_rp1 + minyak_rp2
+bysort urut: egen minyak_ltmax = max(minyak_lt)
+bysort urut: egen minyak_rpmax = max(minyak_rp)
+gen harga_minyak = minyak_rpmax/minyak_ltmax
+
+gen gas_kg = b42k3 if kode==224
+gen gas_rp = b42k4 if kode==225
+bysort urut: egen gas_kg1 = max(gas_kg)
+bysort urut: egen gas_rp1 = max(gas_rp)
+gen harga_gas = gas_rp1/gas_kg1
+
+gen total_bensin_lt = bensin_lt1 + bensin_gen_lt1
+gen total_bensin_rp = bensin_rp1 + bensin_gen_rp1
+gen total_solar_lt = solar_lt1 + solar_gen_lt1
+gen total_solar_rp = solar_rp1 + solar_gen_rp1
+gen total_minyak_lt = minyak_ltmax + minyak_gen_lt1
+gen total_minyak_rp = minyak_rpmax + minyak_gen_rp1
+
+keep urut bensin* harga* minyak* solar* gas* total*
+bysort urut: gen n=_n
+keep if n==1
+br total_bensin_lt bensin_gen_lt1 bensin_lt1
+count
+save "$output\energi_32_36", replace
+
+
+use "$kp23\blok42_51_94", clear
+bysort urut: egen gen = max(b42k3) if kode==209
+bysort urut: egen generator = max(gen)
+tab generator
+gen bensin_gen_lt = b42k3 if kode==210 & generator==1
+gen solar_gen_lt = b42k3 if kode==210 & generator==2
+gen minyak_gen_lt = b42k3 if kode==210 & generator==3
+
+gen bensin_gen_rp = b42k4 if kode==211 & generator==1
+gen solar_gen_rp = b42k4 if kode==211 & generator==2
+gen minyak_gen_rp = b42k4 if kode==211 & generator==3
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	replace `var' = 0 if `var'==.
+}
+
+foreach var of varlist bensin_gen_lt solar_gen_lt minyak_gen_lt bensin_gen_rp solar_gen_rp minyak_gen_rp {
+	bysort urut: egen `var'1 = max(`var')
+}
+
+gen bensin_lt = b42k3 if kode==215
+gen bensin_rp = b42k4 if kode==216
+bysort urut: egen bensin_lt1 = max(bensin_lt)
+bysort urut: egen bensin_rp1 = max(bensin_rp)
+gen harga_bensin = bensin_rp1/bensin_lt1
+
+gen solar_lt = b42k3 if kode==217
+gen solar_rp = b42k4 if kode==218
+bysort urut: egen solar_lt1 = max(solar_lt)
+bysort urut: egen solar_rp1 = max(solar_rp)
+gen harga_solar = solar_rp1/solar_lt1
+
+gen minyak_lt1 = b42k3 if kode==219
+gen minyak_rp1 = b42k4 if kode==220
+gen minyak_lt2 = b42k3 if kode==228
+gen minyak_rp2 = b42k4 if kode==229
+foreach var of varlist minyak* solar* bensin*{
+	replace `var' = 0 if `var'==.
+}
+gen minyak_lt = minyak_lt1 + minyak_lt2 
+gen minyak_rp = minyak_rp1 + minyak_rp2
+bysort urut: egen minyak_ltmax = max(minyak_lt)
+bysort urut: egen minyak_rpmax = max(minyak_rp)
+gen harga_minyak = minyak_rpmax/minyak_ltmax
+
+gen gas_kg = b42k3 if kode==224
+gen gas_rp = b42k4 if kode==225
+bysort urut: egen gas_kg1 = max(gas_kg)
+bysort urut: egen gas_rp1 = max(gas_rp)
+gen harga_gas = gas_rp1/gas_kg1
+
+gen total_bensin_lt = bensin_lt1 + bensin_gen_lt1
+gen total_bensin_rp = bensin_rp1 + bensin_gen_rp1
+gen total_solar_lt = solar_lt1 + solar_gen_lt1
+gen total_solar_rp = solar_rp1 + solar_gen_rp1
+gen total_minyak_lt = minyak_ltmax + minyak_gen_lt1
+gen total_minyak_rp = minyak_rpmax + minyak_gen_rp1
+
+keep urut bensin* harga* minyak* solar* gas* total*
+bysort urut: gen n=_n
+keep if n==1
+br total_bensin_lt bensin_gen_lt1 bensin_lt1
+count
+save "$output\energi_51_94", replace
+
+use "$output\energi_11_31", clear
+append using "$output\energi_32_36"
+append using "$output\energi_51_94"
+save "$output\energi_s23", replace
+
+use "$output\desil_s23", clear
+merge 1:1 urut using "$output\energi_s23"
+merge 1:1 urut using "$output\listrik_gas_s23", nogen
+merge 1:1 urut using "$output\bantuan23", nogen
+
+table desil gas3kg [fw=round(wert)]
+table desil daya [fw=round(wert)]
+table desil penerangan [fw=round(wert)]
+table desil penerangan
+
+table desil pkh[fw=round(wert)]
+table desil bpnt[fw=round(wert)]
+table desil atensi[fw=round(wert)]
+table desil bsu[fw=round(wert)]
+table desil bltdd[fw=round(wert)]
+
+gen gas = gas_kg1*wert
+gen bensin = total_bensin_lt*wert
+gen minyak = total_minyak_lt*wert
+gen solar = total_solar_lt*wert
+
+gen rpgas = gas_rp1*wert
+gen rpbensin = total_bensin_rp*wert
+gen rpminyak = total_minyak_rp*wert
+gen rpsolar = total_solar_rp*wert
+
+foreach var of varlist gas_kg1 total_bensin_lt total_minyak_lt total_solar_lt {
+	bysort desil: egen sum_`var' = sum(`var')
+}
+
+tab desil
+bys desil: gen urutan = _n
+keep if urutan==1
+br
+
+//End of dofile
